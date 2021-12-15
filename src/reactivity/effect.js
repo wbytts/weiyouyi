@@ -1,22 +1,22 @@
 
-let activeEffect =null
+let activeEffect = null
 let shouldTrack = false
 // let effectStack = []
 const targetMap = new WeakMap()
 
 
 export function effect(fn, options = {}) {
-    // effect嵌套，通过队列管理
-  const effectFn = ()=>{
-    try{
+  // effect嵌套，通过队列管理
+  const effectFn = () => {
+    try {
       activeEffect = effectFn
       //fn执行的时候，内部读取响应式数据的时候，就能在get配置里读取到activeEffect
-      return fn() 
-    }finally{
+      return fn()
+    } finally {
       activeEffect = null
     }
   }
-  if(!options.lazy){
+  if (!options.lazy) {
     //没有配置lazy 直接执行
     effectFn()
   }
@@ -42,7 +42,7 @@ export function track(target, type, key) {
     // depsMap = new Map()
     // targetMap.set(target, depsMap)
     // 上面两行可以简写成下面的
-    targetMap.set(target, (depsMap=new Map()))
+    targetMap.set(target, (depsMap = new Map()))
   }
   let deps = depsMap.get(key)
   if (!deps) {

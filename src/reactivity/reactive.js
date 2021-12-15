@@ -6,9 +6,9 @@ import {
 export const reactiveMap = new WeakMap()
 export const shallowReactiveMap = new WeakMap()
 
-export const ReactiveFlags= {
-  IS_REACTIVE : "__v_isReactive",
-  RAW : "__v_raw",
+export const ReactiveFlags = {
+  IS_REACTIVE: "__v_isReactive",
+  RAW: "__v_raw",
 }
 
 export function reactive(target) {
@@ -32,7 +32,7 @@ function createReactiveObject(target, proxyMap, proxyHandlers) {
   // 通过proxy创建代理，不同的map存储不同类型的reactive依赖关系
   // 针对普通的对象和es6的map set等数据结构，需要使用不同的handlers
   // 不过这里没实现map等数据结构的collectionHandlers，有兴趣可以去vue源码中自己学习
-  
+
   // 缓存找到了，直接返回
   const existingProxy = proxyMap.get(target)
   if (existingProxy) {

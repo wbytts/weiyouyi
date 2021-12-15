@@ -1,6 +1,6 @@
 import { track, trigger } from './effect'
 import { reactive } from './reactive'
-import {isObject} from '../shared'
+import { isObject } from '../shared'
 
 export function ref(val) {
   if (isRef(val)) {
@@ -24,7 +24,7 @@ class RefImpl {
   }
 
   set value(val) {
-    if (val!==this._val) {
+    if (val !== this._val) {
       this._val = convert(val)
       trigger(this, 'value')
     }
