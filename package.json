@@ -4,10 +4,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "jest"
   },
   "dependencies": {
-    "vue": "^3.2.25"
+    "@babel/core": "^7.16.5",
+    "@babel/preset-env": "^7.16.5",
+    "babel-jest": "^27.4.5",
+    "jest": "^27.4.5",
+    "vue": "^3.2.25",
+    "vue-jest": "^3.0.7"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^2.0.0",
