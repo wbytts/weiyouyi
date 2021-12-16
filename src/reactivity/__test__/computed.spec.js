@@ -1,4 +1,3 @@
-import { effect } from '../effect'
 import {  ref } from '../ref'
 import {  reactive } from '../reactive'
 import { computed } from '../computed'
@@ -17,8 +16,6 @@ describe('computed测试',()=>{
     num.value = 10
     expect(sum.value).toBe(12)
   })
-
-
   it('computed属性修改',()=>{
     const author = ref('大圣')
     const course = ref('玩转Vue3')

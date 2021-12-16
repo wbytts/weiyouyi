@@ -29,6 +29,11 @@ export function isReactive(value) {
 }
 
 function createReactiveObject(target, proxyMap, proxyHandlers) {
+  if (typeof target!=='object') {
+    console.warn(`reactive  ${target} 必须是一个对象`);
+    return target
+  }
+
   // 通过proxy创建代理，不同的map存储不同类型的reactive依赖关系
   // 针对普通的对象和es6的map set等数据结构，需要使用不同的handlers
   // 不过这里没实现map等数据结构的collectionHandlers，有兴趣可以去vue源码中自己学习

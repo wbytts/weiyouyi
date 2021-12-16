@@ -17,8 +17,22 @@ export function createRenderer(options) {
     setScopeId: hostSetScopeId ,
   } = options
   // 核心调度逻辑
-  function patch(){
-
+  // n1和n2是新老虚拟dom元素
+  function patch(n1,n2,container,anchor,parentComponent){
+    const { type, shapeFlag } = n2
+    switch (type) {
+      case Text:
+        processText(n1, n2, container)
+        break
+      // 还有注释，fragment之类的可以处理，这里忽略
+      default:
+        // 通过shapeFlag判断类型
+        if (shapeFlag & ShapeFlags.ELEMENT) {
+          processElement(n1, n2, container, anchor, parentComponent)
+        } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+          processComponent(n1, n2, container, parentComponent)
+        }
+    }
   }
 
   //处理组件

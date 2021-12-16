@@ -1,6 +1,6 @@
 
 let activeEffect = null
-let shouldTrack = false
+// let shouldTrack = false
 // let effectStack = []
 const targetMap = new WeakMap()
 
@@ -21,7 +21,6 @@ export function effect(fn, options = {}) {
     effectFn()
   }
   effectFn.scheduler = options.scheduler // 调度时机 watchEffect回用到
-
   return effectFn
 }
 
@@ -55,7 +54,6 @@ export function track(target, type, key) {
   }
 }
 export function trigger(target, type, key) {
-  // console.log(target)
   // console.log(`触发 trigger -> target:  type:${type} key:${key}`)
   // 从targetMap中找到触发的函数，执行他
   const depsMap = targetMap.get(target)
