@@ -323,8 +323,140 @@ function setupRenderEffect(instance,container,) {
     // 最复杂的就是这里了，每个元素都有key，都能判断出是否需要复用
     // 需要做的就是找到最短的操作路径,全部代码见github
     // https://github.com/vuejs/vue-next/blob/a31303f835f47c7aa5932267342a2cc2b21db948/packages/runtime-core/src/renderer.ts#L1762
+    let i = 0
+    let e1 = c1.length - 1
+    let e2 = c2.length - 1
+    // 1. 新老数组头部相同vdom判断
+    // key的判断可能要换成isSameVNodetype
+    // (a b) c
+    // (a b) d e
+    while (i <= e1 && i <= e2 && isSameVNodetype(c1[i],c2[i])) {
+      patch(c1[i], c2[i], container)
+      i++
+    }
+    // 2.尾部相同vdom判断
+    // a (b c)
+    // d e (b c)
+    while (i <= e1 && i <= e2 && isSameVNodetype(c1[i],c2[i])) {
+      patch(c1[e1], c2[e2], container, anchor)
+      e1--
+      e2--
+    }
+
+    if (i > e1 && i <= e2) {
+      // 3.如果i比e1大，说明老的遍历完了，新的还有元素，直接mount
+      // (a b)
+      // (a b) c
+      // i = 2, e1 = 1, e2 = 2
+      // (a b)
+      // c (a b)
+      // i = 0, e1 = -1, e2 = 0
+      const nextPos = i + 1
+      const anchor = nextPos < l2 ? c2[nextPos].el : parentAnchor
+      for (let j = i; j <= e2; j++) {
+        patch(null, c2[j], container, anchor)
+      }
+    } else if (i > e2) {
+      // 4.否则如果i比e2大，说明新的遍历完了，老的还有元素 直接unmount
+      // (a b) c
+      // (a b)
+      // i = 2, e1 = 2, e2 = 1
+      // a (b c)
+      // (b c)
+      // i = 0, e1 = 0, e2 = -1
+      while (i <= e1) {
+        unmount(c1[i])
+        i++
+      }
+    } else{
+      // 需要对比的序列
+    // a [h b f d c] g
+    // a [b c d e f] g
+    // i = 1, e1 = 5, e2 = 5
+      let s1 = i
+      let s2 = i
+      //存储key和在新的虚拟dom的newIndex映射关系，方便后续基于key找到在新书组的位置
+      const keyToNewIndexMap = new Map()  
+      // 遍历新数组中剩下的元素
+      for (let i = s2; i <= e2; i++) {
+        const nextChild = c2[i]
+        keyToNewIndexMap.set(nextChild.key, i)
+      }
+      let patched = 0 //处理节点的数量
+      const toBePatched = e2 - s2 + 1
+      // 使用newIndexToOldIndexMap建立一个节点在新老数组中的位置关系, 方便确认最长递增子序列，默认都是0
+      const newIndexToOldIndexMap = new Array(toBePatched).fill(0)
+      //move元素是否需要有移动，通过maxNewIndexSoFar来判断
+      let maxNewIndexSoFar = 0
+      let move = false
+      
+
+
+      for (i = s1; i <= e1; i++) {
+        const prev = c1[i]
+
+        if (patched >= toBePatched) {
+          // 更新的借点数大于全部新数组要处理的数量，剩下的直接删除
+          unmount(prevChild)
+          continue
+        }
+
+        const newIndex = keyToNewIndexMap.get(prev.key)
+        // 新节点的第newIndex个元素在newIndexToOldIndexMap的值是老数组中的索引比如
+        // a [h b f d c] g
+        // a [b c d e f] g
+        // i = 1, e1 = 5, e2 = 5
+        // keyToNewIndexMap: { b:1, c:2,d:3,e:4,f:5}
+        // newIndexToOldIndexMap: [0,3，6，5，0，3]
+        // 但是在newIndexToOldIndexMap中处理了头部已经预判的元素，也就是[newIndex-s2]
+        // 所以就是[3，6，5，0，3]
+        // 大概意思就是b这个元素在新数组中位置是1， 根据1去newIndexToOldIndexMap查询得到在老数组的位置是5
+        // i+1避免0是0的情况        
+        newIndexToOldIndexMap[newIndex-s2] = i + 1
+        
+
+        if (newIndex === undefined) {
+          // 新的数组里没有 直接删除
+          hostRemove(prev.el)
+        } else {
+          // 新老节点都有 patch一下下
+          if (newIndex >= maxNewIndexSoFar) {
+            // 出现比maxNewIndexSoFar大的，说明需要移动元素了
+            move = true
+          } else {
+            maxNewIndexSoFar = newIndex
+          }
+          patch(prev, c2[newIndex], container)
+        }
+      }
+      // 完成新旧子序列的节点的unmount和patch,
+      const increasingNewIndexSequence = moved
+        ? getSequence(newIndexToOldIndexMap)
+        : []
+
+        j = increasingNewIndexSequence.length - 1
+
+        for (i = toBePatched - 1; i >= 0; i--) {
+          const nextIndex = s2 + i
+          const next = c2[nextIndex] 
+          const anchor =
+            nextIndex + 1 < l2 ? (c2[nextIndex + 1] ).el : anchor
+          if (newIndexToOldIndexMap[i] === 0) {
+            // mount new
+            patch(null, next, container, anchor )
+          } else if (moved) {
+
+            if (j < 0 || i !== increasingNewIndexSequence[j]) {
+              hostInsert(next,container,anchor)
+            } else {
+              j--
+            }
+          }
+        }
 
   }
+
+  
   function patchUnKeyedChildren(c1, c2, container) {
     // v-for或者多个子元素没写key
     // prev: a b c d 
@@ -361,4 +493,49 @@ function setupRenderEffect(instance,container,) {
   return {
     createApp: createAppAPI(render)
   }
+}
+
+
+// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
+function getSequence(arr) {
+  // copy一份，存储更新result前最后一个索引，key就是要更新的值
+  const p = arr.slice()
+  const result = [0]
+  let i, j, u, v, c
+  const len = arr.length
+  for (i = 0; i < len; i++) {
+    const arrI = arr[i]
+    if (arrI !== 0) {
+      j = result[result.length - 1]
+      if (arr[j] < arrI) {
+        p[i] = j
+        result.push(i)
+        continue
+      }
+      u = 0
+      v = result.length - 1
+      // 二分 找到比arrI小的节点，更新result
+      while (u < v) {
+        c = (u + v) >> 1
+        if (arr[result[c]] < arrI) {
+          u = c + 1
+        } else {
+          v = c
+        }
+      }
+      if (arrI < arr[result[u]]) {
+        if (u > 0) {
+          p[i] = result[u - 1]
+        }
+        result[u] = i
+      }
+    }
+  }
+  u = result.length
+  v = result[u - 1]
+  while (u-- > 0) {
+    result[u] = v
+    v = p[v]
+  }
+  return result
 }
