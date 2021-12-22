@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-
-// https://vitejs.dev/config/
+import autoPlgin from './src/auto-import'
+import autoTry from './src/auto-try'
 export default defineConfig({
-  plugins: [vue()]
+  plugins: [vue(),autoPlgin(),autoTry()]
 })

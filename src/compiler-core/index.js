@@ -1,4 +1,14 @@
-// 一个非常der的compiler实现
+const { render } = require("vue")
+
+const PatchFlags = {
+  "TEXT": 1,
+  "CLASS": 1 << 1,
+  "STYLE": 1 << 2,
+  "PROPS": 1 << 3,
+  "EVENT": 1 << 4,
+}
+
+
 
 function tokenizer(input) {
   let tokens = []
@@ -15,13 +25,13 @@ function tokenizer(input) {
         type = 'tagstart'
       }
     } if (ch === '>') {
-      if(input[i-1]=='='){
+      if (input[i - 1] == '=') {
         //箭头函数
-      }else{
+      } else {
         push()
         type = "text"
+        continue
       }
-      continue
     } else if (/[\s]/.test(ch)) { // 碰见空格夹断一下
       push()
       type = 'props'
@@ -45,11 +55,12 @@ function tokenizer(input) {
 }
 
 function parse(template) {
+
   const tokens = tokenizer(template)
   let cur = 0
   let ast = {
     type: 'root',
-    props:[],
+    props: [],
     children: []
   }
   while (cur < tokens.length) {
@@ -88,7 +99,7 @@ function parse(template) {
     }
     if (token.type === "props") {
       cur++
-      const [key, val] = token.val.split('=')
+      const [key, val] = token.val.replace('=','~').split('~')
       return {
         key,
         val
@@ -100,89 +111,97 @@ function transform(ast) {
   // 优化一下ast
   let context = {
     // import { toDisplayString , createVNode , openBlock , createBlock } from "vue"
-    helpers:new Set(['openBlock','createVnode']), // 用到的工具函数 
+    helpers: new Set(['openBlock', 'createVnode']), // 用到的工具函数 
   }
   traverse(ast, context)
   ast.helpers = context.helpers
 }
-function traverse(ast, context){
-  switch(ast.type){
+function traverse(ast, context) {
+  switch (ast.type) {
     case "root":
       context.helpers.add('createBlock')
-      // log(ast)
+    // log(ast)
     case "element":
-      ast.children.forEach(node=>{
-        traverse(node,context)
+      ast.children.forEach(node => {
+        traverse(node, context)
       })
-      ast.flag = {props:false,class:false,event:false}
-      ast.props = ast.props.map(prop=>{
-        const {key,val} = prop
-        if(key[0]=='@'){
-          ast.flag.event = true
+      ast.flag = 0
+      ast.props = ast.props.map(prop => {
+        const { key, val } = prop
+        if (key[0] == '@') {
+          ast.flag |= PatchFlags.EVENT // 标记event需要更新
           return {
-            key:'on'+key[1].toUpperCase()+key.slice(2),
+            key: 'on' + key[1].toUpperCase() + key.slice(2),
             val
           }
         }
-        if(key[0]==':'){
-          ast.flag.props = true
-          return{
-            key:key.slice(1),
+        if (key[0] == ':') {
+          const k = key.slice(1)
+          if (k == "class") {
+            ast.flag |= PatchFlags.CLASS // 标记class需要更新
+
+          } else if (k == 'style') {
+            ast.flag |= PatchFlags.STYLE // 标记style需要更新
+          } else {
+            ast.flag |= PatchFlags.PROPS // 标记props需要更新
+          }
+          return {
+            key: key.slice(1),
             val
           }
         }
-        if(key.startsWith('v-')){
-          // pass such as v-model
+        if (key.startsWith('v-')) {
+          // pass such as v-model 
         }
-        return {...prop,static:true}
+        //标记static是true 静态节点
+        return { ...prop, static: true }
       })
       break
     case "text":
       // trnsformText
       let re = /\{\{(.*)\}\}/g
-      if(re.test(ast.val)){
+      if (re.test(ast.val)) {
         //有{{
-          ast.static = false
-          context.helpers.add('toDisplayString')
-          ast.val = ast.val.replace(/\{\{(.*)\}\}/g,function(s0,s1){
-            return s1
-          })
-      }else{
+        ast.flag |= PatchFlags.TEXT // 标记props需要更新
+        context.helpers.add('toDisplayString')
+        ast.val = ast.val.replace(/\{\{(.*)\}\}/g, function (s0, s1) {
+          return s1
+        })
+      } else {
         ast.static = true
       }
   }
 }
-
 function generate(ast) {
-  const {helpers} = ast 
+  const { helpers } = ast
 
   let code = `
-import {${[...helpers].map(v=>v+' as _'+v).join(',')}} from 'vue'\n
+import {${[...helpers].map(v => v + ' as _' + v).join(',')}} from 'vue'\n
 export function render(_ctx, _cache, $props){
-  return(_openBlock(), ${ast.children.map(node=>walk(node))})}`
+  return(_openBlock(), ${ast.children.map(node => walk(node))})}`
 
-  function walk(node){
-    switch(node.type){
+  function walk(node) {
+    switch (node.type) {
       case 'element':
-        let {flag} = node // 编译的标记
-        let props = '{'+node.props.reduce((ret,p)=>{
-          if(flag.props){
+        let { flag } = node // 编译的标记
+        let props = '{' + node.props.reduce((ret, p) => {
+          if (flag.props) {
             //动态属性
-            ret.push(p.key +':_ctx.'+p.val.replace(/['"]/g,'') )
-          }else{
-            ret.push(p.key +':'+p.val )
+            ret.push(p.key + ':_ctx.' + p.val.replace(/['"]/g, ''))
+          } else {
+            ret.push(p.key + ':' + p.val)
           }
 
           return ret
-        },[]).join(',')+'}'
+        }, []).join(',') + '}'
         return `_createVnode("${node.tag}",${props}),[
-          ${node.children.map(n=>walk(n))}
+          ${node.children.map(n => walk(n))}
         ],${JSON.stringify(flag)}`
         break
       case 'text':
-        if(node.static){
-          return '"'+node.val+'"'
-        }else{
+        if (node.static) {
+          return '"' + node.val + '"'
+        } else {
           return `_toDisplayString(_ctx.${node.val})`
         }
         break
@@ -192,8 +211,7 @@ export function render(_ctx, _cache, $props){
 }
 
 function compiler(template) {
-  const ast = parse(template);
-  console.log(JSON.stringify(ast,null,2))
+  const ast = parse(template)
   transform(ast)
 
   const code = generate(ast)
@@ -208,4 +226,4 @@ let template = `<div id="app">
 `
 
 const renderFunction = compiler(template)
-// console.log(renderFunction)
+console.log(renderFunction)
