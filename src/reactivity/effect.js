@@ -46,12 +46,12 @@ export function track(target, type, key) {
   let deps = depsMap.get(key)
   if (!deps) {
     deps = new Set()
-    if (!deps.has(activeEffect) && activeEffect) {
-      // 防止重复注册
-      deps.add(activeEffect)
-    }
-    depsMap.set(key, deps)
   }
+  if (!deps.has(activeEffect) && activeEffect) {
+    // 防止重复注册
+    deps.add(activeEffect)
+  }
+  depsMap.set(key, deps)
 }
 export function trigger(target, type, key) {
   // console.log(`触发 trigger -> target:  type:${type} key:${key}`)
