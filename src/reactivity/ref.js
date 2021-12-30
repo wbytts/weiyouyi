@@ -19,14 +19,14 @@ class RefImpl {
     this._val = convert(val)
   }
   get value() {
-    track(this, 'value')
+    track(this, 'get', 'value')
     return this._val
   }
 
   set value(val) {
     if (val !== this._val) {
       this._val = convert(val)
-      trigger(this, 'value')
+      trigger(this, 'set', 'value')
     }
   }
 }
