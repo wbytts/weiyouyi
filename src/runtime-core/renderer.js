@@ -1,5 +1,5 @@
 
-import { createAppAPI } from './createAppAPI'
+import { createAppAPI } from './apiCreateApp'
 import {setCurrentInstance} from './component'
 import {queueJob} from './scheduler'
 import {isSameVNodeType} from './vnode'
@@ -200,36 +200,36 @@ export function createRenderer(options) {
     
    }
 
-//设置setup函数
-function setupRenderEffect(instance,container,) { 
-  instance.update = effect(componentEffect, {
-    scheduler: () => {
-      queueJob(instance.update)
-    },
-  })
+  //设置setup函数
+  function setupRenderEffect(instance,container,) { 
+    instance.update = effect(componentEffect, {
+      scheduler: () => {
+        queueJob(instance.update)
+      },
+    })
 
-  function componentEffect(){
-    //加载了 
-    if(instance.isMounted){
-      const {vnode,next} = instance
-      if (next) {
-        next.el = vnode.el
-        // 更新组件的props和slots等
-        instance.props = next.props
-        instance.slots = next.slots        
+    function componentEffect(){
+      //加载了 
+      if(instance.isMounted){
+        const {vnode,next} = instance
+        if (next) {
+          next.el = vnode.el
+          // 更新组件的props和slots等
+          instance.props = next.props
+          instance.slots = next.slots        
+        }
+        const nextTree = (instance.subTree = instance.render(instance.ctx))
+        patch(instance.subTree, nextTree, container)
+      }else{
+        // 还没挂载
+        const subTree = (instance.subTree = normalizeVNode(
+          Component.render(instance.ctx)
+        ))
+        patch(null, subTree, container)
+        instance.isMounted = true
       }
-      const nextTree = (instance.subTree = instance.render(instance.ctx))
-      patch(instance.subTree, nextTree, container)
-    }else{
-      // 还没挂载
-      const subTree = (instance.subTree = normalizeVNode(
-        Component.render(instance.ctx)
-      ))
-      patch(null, subTree, container)
-      instance.isMounted = true
     }
   }
-}
 
   // 挂载html元素
   function mountElement(vnode, container, anchor) {
@@ -389,9 +389,6 @@ function setupRenderEffect(instance,container,) {
       //move元素是否需要有移动，通过maxNewIndexSoFar来判断
       let maxNewIndexSoFar = 0
       let move = false
-      
-
-
       for (i = s1; i <= e1; i++) {
         const prev = c1[i]
 
@@ -453,7 +450,7 @@ function setupRenderEffect(instance,container,) {
             }
           }
         }
-
+    }
   }
 
   
@@ -495,8 +492,6 @@ function setupRenderEffect(instance,container,) {
   }
 }
 
-
-// https://en.wikipedia.org/wiki/Longest_increasing_subsequence
 function getSequence(arr) {
   // copy一份，存储更新result前最后一个索引，key就是要更新的值
   const p = arr.slice()

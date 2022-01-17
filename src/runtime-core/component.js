@@ -6,3 +6,8 @@ export function getCurrentInstance() {
 export function setCurrentInstance(instance) {
   currentInstance = instance
 }
+
+let compile;
+export function registerRuntimeCompiler(_compile) {
+  compile = _compile;
+}

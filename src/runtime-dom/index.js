@@ -2,6 +2,7 @@
 import { isOn } from "../shared"
 import { createRenderer } from "../runtime-core"
 
+export * from '../runtime-core'
 let renderer
 function ensureRenderer() {
   // 缓存
