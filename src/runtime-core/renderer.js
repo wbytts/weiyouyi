@@ -239,7 +239,7 @@ export function createRenderer(options) {
   // 挂载html元素
   function mountElement(vnode, container, anchor) {
     const { shapeFlag, props, children, type } = vnode
-    vnode.el = hostCreateElement(type)
+    let el = vnode.el = hostCreateElement(type)
     // 支持单子组件和多子组件的创建
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // 子元素是childern

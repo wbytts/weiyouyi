@@ -44,6 +44,7 @@ const nodeOps = {
   setScopeId(el, id) {
     el.setAttribute(id, '')
   },
+  patchProp
 }
 
 function patchProp(el, key, prev, next) {
