@@ -2,14 +2,13 @@
 import {ShapeFlags} from '../shared'
 
 export function createVNode(type,props=null,children=null){
-
   // teleport, fragment都先忽略
   // 一个虚拟dom主要的三个类型，element，text和component
   let shapeFlag = typeof type=='string'
     ? ShapeFlags.ELEMENT
     : type==Text 
       ? ShapeFlags.TEXT
-      : typeof type=='function'
+      : typeof type=='function' || typeof type.render=='function'
         ? ShapeFlags.COMPONENT
         : 0
   

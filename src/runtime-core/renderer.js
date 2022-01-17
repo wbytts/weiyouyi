@@ -3,6 +3,7 @@ import { createAppAPI } from './apiCreateApp'
 import {setCurrentInstance} from './component'
 import {queueJob} from './scheduler'
 import {isSameVNodeType} from './vnode'
+import {effect} from '../reactivity'
 import {ShapeFlags} from '../shared'
 export function createRenderer(options) {
 
@@ -22,6 +23,7 @@ export function createRenderer(options) {
   // 核心调度逻辑
   // n1和n2是新老虚拟dom元素
   function patch(n1, n2, container) {
+
     if(n1==n2){
       return 
     }
@@ -39,8 +41,8 @@ export function createRenderer(options) {
       default:
         // 通过shapeFlag判断类型
         if (shapeFlag & ShapeFlags.ELEMENT) {
-          processElement(n1, n2, container, anchor)
-        } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
+          processElement(n1, n2, container)
+        } else if (shapeFlag & ShapeFlags.COMPONENT) {
           processComponent(n1, n2, container)
         }
     }
@@ -141,7 +143,7 @@ export function createRenderer(options) {
     // 创建组件实例，其实就是个对象，包含组件的各种属性
     const instance = vnode.component = {
       vnode,
-      type:vnode.tyope,
+      type:vnode.type,
       props:vnode.props,
       setupState:{}, //响应式状态
       slots:{},
@@ -151,7 +153,7 @@ export function createRenderer(options) {
     // 启动setup函数中的各种响应式数据
     setupComponent(instance)
 
-    setupRenderEffect(instance, initialVNode, container)
+    setupRenderEffect(instance, container)
   }
   
   //组件预渲染
@@ -165,17 +167,18 @@ export function createRenderer(options) {
     const { setup } = component
     // 设置正在处理的componeng实例 
     setCurrentInstance(instance)
+
+    // 不用script setup，setup中的参数就是来源这里
+    // export default {
+    //   setup(props,{attr,slots,emit})
+    // }
     // 所以setup函数内部就可以通过getCurrrntInstance获取当前组件的实例
     const setupContext = {
       attrs:instance.attrs,
       slots:instance.slots,
       emit:instance.emit // @todo 还没实现emit
     }
-    // 不用script setup，setup中的参数就是来源这里
-    // export default {
-    //   setup(props,{attr,slots,emit})
-    // }
-    const setupResult =setup(instance.props, setupContext)
+    const setupResult = setup ? setup(instance.props, setupContext) :null
     setCurrentInstance(null)
     instance.ctx = {
       ...instance.props,
@@ -190,19 +193,22 @@ export function createRenderer(options) {
     }
     // 如果没有render并且又template，需要把template处理成render函数
     // render函数的目的就是返回虚拟dom，compiler就是compiler模块需要实现的
-    if (!Component.render && Component.template) {
-      let { template } = Component
+    if (!component.render && component.template) {
+      let { template } = component
       if (template[0] === '#') {
         const el = document.querySelector(template)
         template = el ? el.innerHTML : ''
       }
-      Component.render = new Function('ctx', compile(template))
+      component.render = new Function('ctx', compile(template))
     }
     
    }
 
   //设置setup函数
-  function setupRenderEffect(instance,container,) { 
+  function setupRenderEffect(instance,container) { 
+    const {vnode} = instance
+    const { type: Component } = vnode;
+
     instance.update = effect(componentEffect, {
       scheduler: () => {
         queueJob(instance.update)
@@ -223,9 +229,7 @@ export function createRenderer(options) {
         patch(instance.subTree, nextTree, container)
       }else{
         // 还没挂载
-        const subTree = (instance.subTree = normalizeVNode(
-          Component.render(instance.ctx)
-        ))
+        const subTree = (instance.subTree = Component.render(instance.ctx) )
         patch(null, subTree, container)
         instance.isMounted = true
       }
@@ -239,7 +243,7 @@ export function createRenderer(options) {
     // 支持单子组件和多子组件的创建
     if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
       // 子元素是childern
-      hostSetElementText(n2.el, children)
+      hostSetElementText(vnode.el, children)
     } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
       // 是一个数组，比如多个div元素
       mountChildren(vnode.children, el)
@@ -477,7 +481,8 @@ export function createRenderer(options) {
   }
 
   function render(vnode, container) {
-    const preVNode = container._vnode
+    const prevVNode = container._vnode
+
     if (vnode == null) {
       if (preVNode) {
         unmount(preVNode) // 传递vnode是null，直接全部卸载
