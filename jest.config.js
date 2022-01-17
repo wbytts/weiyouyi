@@ -6,4 +6,6 @@ module.exports = {
   testMatch: ['**/?(*.)+(spec).[jt]s?(x)'],
   "collectCoverage": true,
   "coverageReporters": ["json", "html"],
+  testEnvironment: 'jsdom',
+
 }

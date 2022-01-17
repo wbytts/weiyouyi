@@ -3,6 +3,7 @@ import { createAppAPI } from './apiCreateApp'
 import {setCurrentInstance} from './component'
 import {queueJob} from './scheduler'
 import {isSameVNodeType} from './vnode'
+import {ShapeFlags} from '../shared'
 export function createRenderer(options) {
 
   const {
