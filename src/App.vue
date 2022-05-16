@@ -5,6 +5,9 @@
 </template>
 
 <script setup>
+// import {ref, computed} from './reactivity';
+import {onMounted, ref, computed} from 'vue'
+
 let num = ref(1)
 let double = computed(()=>num.value*2)
 

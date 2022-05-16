@@ -15,7 +15,11 @@ async function test2(){
     console.error(e)
   }
 }
-test()
+
+
+// test()
+
+
 function delyError(message){
   return new Promise((resolve,reject)=>{
     setTimeout(()=>{

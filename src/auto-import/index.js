@@ -15,9 +15,9 @@ export default function autoImportPlugin() {
             helpers.add(api)
           }
         })
-        return code.replace('<script setup>',`<script setup>
-
-import {${[...helpers].join(',')}} from 'vue' //俺是自动导入的        
+        return code.replace('<script setup>',`
+        <script setup>
+import {${[...helpers].join(',')}} from 'vue' //俺是自动导入的
 `)
       }
       return code
